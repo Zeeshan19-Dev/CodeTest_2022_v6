@@ -30,22 +30,31 @@ class BookingController extends Controller
     }
 
     /**
+     * Handle the request to fetch jobs.
+     *
      * @param Request $request
-     * @return mixed
+     * @return JsonResponse
      */
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
-        if($user_id = $request->get('user_id')) {
+        $userId = $request->get('user_id');
 
-            $response = $this->repository->getUsersJobs($user_id);
-
-        }
-        elseif($request->__authenticatedUser->user_type == env('ADMIN_ROLE_ID') || $request->__authenticatedUser->user_type == env('SUPERADMIN_ROLE_ID'))
-        {
-            $response = $this->repository->getAll($request);
+        if ($userId) {
+            return response()->json($this->repository->getUsersJobs($userId));
         }
 
-        return response($response);
+        $adminRoles = [
+            config('app.admin_role_id'),
+            config('app.superadmin_role_id')
+        ];
+
+        $authenticatedUser = $request->__authenticatedUser;
+
+        if (in_array($authenticatedUser && $authenticatedUser->user_type, $adminRoles)) {
+            return response()->json($this->repository->getAll($request));
+        }
+
+        return response()->json([]);
     }
 
     /**
@@ -56,7 +65,7 @@ class BookingController extends Controller
     {
         $job = $this->repository->with('translatorJobRel.user')->find($id);
 
-        return response($job);
+        return response()->json($job);
     }
 
     /**
@@ -69,7 +78,7 @@ class BookingController extends Controller
 
         $response = $this->repository->store($request->__authenticatedUser, $data);
 
-        return response($response);
+        return response()->json($response);
 
     }
 
@@ -84,7 +93,7 @@ class BookingController extends Controller
         $cuser = $request->__authenticatedUser;
         $response = $this->repository->updateJob($id, array_except($data, ['_token', 'submit']), $cuser);
 
-        return response($response);
+        return response()->json($response);
     }
 
     /**
@@ -107,7 +116,7 @@ class BookingController extends Controller
      */
     public function getHistory(Request $request)
     {
-        if($user_id = $request->get('user_id')) {
+        if ($user_id = $request->get('user_id')) {
 
             $response = $this->repository->getUsersJobsHistory($user_id, $request);
             return response($response);
@@ -217,12 +226,12 @@ class BookingController extends Controller
         }
 
         if ($data['flagged'] == 'true') {
-            if($data['admincomment'] == '') return "Please, add comment";
+            if ($data['admincomment'] == '') return "Please, add comment";
             $flagged = 'yes';
         } else {
             $flagged = 'no';
         }
-        
+
         if ($data['manually_handled'] == 'true') {
             $manually_handled = 'yes';
         } else {
